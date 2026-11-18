@@ -60,6 +60,27 @@ jobs:
           get assets/fonts/raleway-latin.woff2     "https://cdn.jsdelivr.net/fontsource/fonts/raleway:vf@latest/latin-wght-normal.woff2"
           get assets/fonts/raleway-latin-ext.woff2 "https://cdn.jsdelivr.net/fontsource/fonts/raleway:vf@latest/latin-ext-wght-normal.woff2"
 
+      - name: Képek optimalizálása
+        run: |
+          python3 -m pip install --quiet pillow
+          python3 - <<'PY'
+          from PIL import Image
+          d = 'assets/img/'
+          # a logó körüli üres, átlátszó margó levágása
+          im = Image.open(d + 'logo.png')
+          im = im.crop(im.getbbox())
+          im.thumbnail((600, 600))
+          im.save(d + 'logo.png', optimize=True)
+          # infoblokkok: elég nagy felbontás, kisebb fájlméret
+          for f, w in [('infoblokk-bar.jpg', 700), ('infoblokk-ginop.jpg', 900)]:
+              im = Image.open(d + f); im.thumbnail((w, 4000)); im.save(d + f, quality=85, optimize=True, progressive=True)
+          im = Image.open(d + 'szechenyi-infoblokk.png'); im.thumbnail((800, 800)); im.save(d + 'szechenyi-infoblokk.png', optimize=True)
+          # háttérképek és diák
+          for f in ['bg-napelem.jpg', 'bg-kapcsolat.jpg', 'slide-tavoli.jpg', 'slide-energia.jpg', 'slide-halozat.jpg', 'slide-kiber.jpg', 'bg-szolgaltatasok.jpg']:
+              im = Image.open(d + f).convert('RGB'); im.thumbnail((1920, 1920)); im.save(d + f, quality=76, optimize=True, progressive=True)
+          PY
+          ls -l assets/img
+
       - name: Kiegészítő fájlok
         run: |
           echo "smart-service.hu" > CNAME
