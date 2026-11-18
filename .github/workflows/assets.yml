@@ -59,6 +59,8 @@ jobs:
           # Raleway betűtípus (OFL licenc), helyben tárolva – nincs Google Fonts hívás
           get assets/fonts/raleway-latin.woff2     "https://cdn.jsdelivr.net/fontsource/fonts/raleway:vf@latest/latin-wght-normal.woff2"
           get assets/fonts/raleway-latin-ext.woff2 "https://cdn.jsdelivr.net/fontsource/fonts/raleway:vf@latest/latin-ext-wght-normal.woff2"
+          get assets/fonts/manrope-latin.woff2     "https://cdn.jsdelivr.net/fontsource/fonts/manrope:vf@latest/latin-wght-normal.woff2"
+          get assets/fonts/manrope-latin-ext.woff2 "https://cdn.jsdelivr.net/fontsource/fonts/manrope:vf@latest/latin-ext-wght-normal.woff2"
 
       - name: Képek optimalizálása
         run: |
