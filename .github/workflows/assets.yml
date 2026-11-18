@@ -1,0 +1,81 @@
+name: Wix fájlok átmentése
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/assets.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Képek, PDF-ek és betűtípus letöltése
+        run: |
+          set -euo pipefail
+          mkdir -p assets/img assets/docs assets/fonts
+          UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36"
+          W=https://static.wixstatic.com/media
+          get() { curl -fsSL --retry 3 -A "$UA" -o "$1" "$2"; echo "OK  $1  $(stat -c%s "$1") bájt"; }
+          # eredeti méretben (logók, infoblokkok)
+          orig() { get "assets/img/$1" "$W/$2"; }
+          # nagy fotók: Wix oldali átméretezés 1920 px-re, 80-as JPEG minőséggel
+          photo() { get "assets/img/$1" "$W/$2/v1/fit/w_1920,h_1920,q_80/$1"; }
+
+          orig logo.png               947b85_7062cac03d214ead84e0a70d3c79ab68~mv2.png
+          orig hexagon.png            947b85_30bea576028e43ac961ad253216a1b31~mv2.png
+          orig bar-logo.jpg           947b85_c957aaafb5064a7aa5a7b5c232f1f926~mv2.jpg
+          orig szechenyi-infoblokk.png 947b85_29d057e3c2e240c193e275ac676e48fe~mv2.png
+          orig infoblokk-ginop.jpg    947b85_24437fda8d2640a4abce41bcc3acca49~mv2.jpg
+          orig infoblokk-nkfia.jpg    947b85_01fd5d32788947068749fb8e3da7ad93~mv2.jpg
+          orig infoblokk-bar.jpg      947b85_664a55118cec4f76af6afd064c251a52~mv2.jpg
+          photo slide-energia.jpg     947b85_08ddf47cb7ef42f69262725e197fcac5~mv2.jpeg
+          photo slide-halozat.jpg     947b85_0ccf895b237b42e095f5b4e51e2d1bc5~mv2.jpg
+          photo slide-kiber.jpg       947b85_5efa0e33e2b745238b4602c9d384635b~mv2.jpg
+          photo slide-tavoli.jpg      947b85_fed1ff3983c94b27ba4c4d0b9f141e30~mv2.jpeg
+          photo bg-kapcsolat.jpg      947b85_fed1ff3983c94b27ba4c4d0b9f141e30~mv2.jpeg
+          photo bg-szolgaltatasok.jpg 947b85_fc6d135974c7493682554f0a7a9b5b6d~mv2.jpg
+          photo bg-napelem.jpg        947b85_f3fdf52270e34e059806b46949365e17~mv2.jpg
+
+          # sajtóközlemények
+          get assets/docs/piaci-kfi-projektindito-sajtokozlemeny.pdf \
+            "https://918b8244-5fd8-446e-92e2-3aceccf8b76a.filesusr.com/ugd/947b85_5b8e3c00db9544ea968f1b207d4f072f.pdf"
+          docdroid() {  # $1 = célfájl, $2 = docdroid oldal útvonala
+            jar=$(mktemp)
+            page=$(curl -fsSL -A "$UA" -c "$jar" -b "$jar" "https://www.docdroid.net/$2")
+            url=$(printf '%s' "$page" | grep -o 'https://www.docdroid.net/file/download/[^"]*' | head -1 | sed 's/&amp;/\&/g')
+            curl -fsSL --retry 3 -A "$UA" -c "$jar" -b "$jar" -e "https://www.docdroid.net/$2" -o "$1" "$url"
+            echo "OK  $1  $(stat -c%s "$1") bájt"
+          }
+          docdroid assets/docs/ginop-projektindito-sajtokozlemeny.pdf y42aDn2/press-release-20161028-pdf
+          docdroid assets/docs/ginop-projektzaro-sajtokozlemeny.pdf  YLaOy5f/press-release-20190927-pdf
+          for f in assets/docs/*.pdf; do head -c 4 "$f" | grep -q '%PDF' || { echo "HIBA: $f nem PDF"; exit 1; }; done
+
+          # Raleway betűtípus (OFL licenc), helyben tárolva – nincs Google Fonts hívás
+          get assets/fonts/raleway-latin.woff2     "https://cdn.jsdelivr.net/fontsource/fonts/raleway:vf@latest/latin-wght-normal.woff2"
+          get assets/fonts/raleway-latin-ext.woff2 "https://cdn.jsdelivr.net/fontsource/fonts/raleway:vf@latest/latin-ext-wght-normal.woff2"
+
+      - name: Kiegészítő fájlok
+        run: |
+          echo "smart-service.hu" > CNAME
+          touch .nojekyll
+          printf 'User-agent: *\nAllow: /\n\nSitemap: https://smart-service.hu/sitemap.xml\n' > robots.txt
+          cat > sitemap.xml <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+            <url><loc>https://smart-service.hu/</loc><lastmod>$(date +%F)</lastmod></url>
+          </urlset>
+          EOF
+
+      - name: Mentés a repóba
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898333+github-actions[bot]@users.noreply.github.com"
+          git add -A assets CNAME .nojekyll robots.txt sitemap.xml
+          git commit -m "Wix képek, PDF-ek és betűtípus átmentése" || echo "Nincs változás"
+          git push
